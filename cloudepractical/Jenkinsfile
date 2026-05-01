@@ -139,32 +139,15 @@ pipeline {
             }
         }
         
-        // Stage 4: Code Quality Analysis (Optional but recommended)
+        // Stage 4: Code Quality Analysis (Optional)
+        // Note: JaCoCo plugin required on Jenkins - skipping if not available
         stage('Code Quality') {
+            when { expression { false } } // Disabled - requires JaCoCo plugin
             steps {
                 script {
                     echo '========================================'
-                    echo 'STAGE 4: CODE QUALITY - Running analysis'
+                    echo 'STAGE 4: CODE QUALITY - Skipped'
                     echo '========================================'
-                }
-                
-                dir('cloudepractical') {
-                    // Run code coverage with JaCoCo
-                    sh '''
-                        echo "Running JaCoCo code coverage..."
-                        mvn jacoco:report
-                        
-                        echo "Code coverage report generated!"
-                    '''
-                }
-            }
-            post {
-                always {
-                    // Publish JaCoCo coverage report
-                    jacoco execPattern: 'target/*.exec',
-                          classPattern: 'target/classes',
-                          sourcePattern: 'src/main/java',
-                          exclusionPattern: '**/test/**'
                 }
             }
         }
