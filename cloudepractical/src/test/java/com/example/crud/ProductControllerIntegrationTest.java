@@ -1,6 +1,7 @@
 package com.example.crud;
 
 import com.example.crud.entity.Product;
+import com.example.crud.repository.ProductRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,11 +29,18 @@ class ProductControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
     
+    @Autowired
+    private ProductRepository productRepository;
+    
     private Product testProduct;
     
     @BeforeEach
     void setUp() {
-        testProduct = new Product("Test Product", "Test Description", 99.99, 5);
+        // Clean up database before each test to avoid conflicts
+        productRepository.deleteAll();
+        
+        // Use unique product name with timestamp to avoid duplicate name errors
+        testProduct = new Product("Test Product " + System.currentTimeMillis(), "Test Description", 99.99, 5);
     }
     
     @Test
@@ -51,12 +59,12 @@ class ProductControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(productJson))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Test Product"));
+                .andExpect(jsonPath("$.name").value(testProduct.getName()));
         
         // Get all products
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Test Product"));
+                .andExpect(jsonPath("$[0].name").value(testProduct.getName()));
     }
     
     @Test
@@ -79,7 +87,7 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(get("/api/products/search")
                 .param("name", "Test"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Test Product"));
+                .andExpect(jsonPath("$[0].name").value(testProduct.getName()));
     }
     
     @Test
