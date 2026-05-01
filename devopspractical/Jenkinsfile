@@ -1,23 +1,6 @@
-/**
- * Jenkins CI/CD Pipeline for Spring Boot CRUD Application
- * 
- * This pipeline implements:
- * 1. Pull code from GitHub repository
- * 2. Build using Maven
- * 3. Run test cases
- * 4. Generate build artifact (JAR file)
- * 
- * Requirements:
- * - Jenkins with Maven plugin
- * - JDK 17 installed on Jenkins
- * - Git plugin configured
- */
-
 pipeline {
-    // Agent defines where the pipeline runs (any available agent)
     agent any
     
-    // Environment variables
     environment {
         // Application configuration
         APP_NAME = 'spring-boot-crud'
