@@ -176,20 +176,21 @@ pipeline {
                     echo '========================================'
                 }
                 
-                // Package the application (skip tests as they already ran)
-                sh '''
-                    echo "Packaging application..."
-                    mvn package -DskipTests
-                    
-                    echo "Creating artifacts directory..."
-                    mkdir -p ${ARTIFACTS_DIR}
-                    
-                    echo "Copying artifacts..."
-                    cp target/*.jar ${ARTIFACTS_DIR}/
-                    
-                    echo "Artifacts generated:"
-                    ls -lh ${ARTIFACTS_DIR}/
-                '''
+                dir('cloudepractical') {  // <-- YEH ADD KARO
+                    sh '''
+                        echo "Packaging application..."
+                        mvn package -DskipTests
+                        
+                        echo "Creating artifacts directory..."
+                        mkdir -p ${ARTIFACTS_DIR}
+                        
+                        echo "Copying artifacts..."
+                        cp target/*.jar ${ARTIFACTS_DIR}/
+                        
+                        echo "Artifacts generated:"
+                        ls -lh ${ARTIFACTS_DIR}/
+                    '''
+                }
             }
         }
         
@@ -202,14 +203,10 @@ pipeline {
                     echo '========================================'
                 }
                 
-                // Archive the build artifacts
-                archiveArtifacts artifacts: 'target/*.jar', 
+                // Archive path update karo
+                archiveArtifacts artifacts: 'cloudepractical/target/*.jar',
                                fingerprint: true,
                                onlyIfSuccessful: true
-                
-                // Archive additional artifacts
-                archiveArtifacts artifacts: 'artifacts/**',
-                               allowEmptyArchive: false
             }
         }
     }
