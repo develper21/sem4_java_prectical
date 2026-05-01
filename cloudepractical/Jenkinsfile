@@ -1,0 +1,272 @@
+/**
+ * Jenkins CI/CD Pipeline for Spring Boot CRUD Application
+ * 
+ * This pipeline implements:
+ * 1. Pull code from GitHub repository
+ * 2. Build using Maven
+ * 3. Run test cases
+ * 4. Generate build artifact (JAR file)
+ * 
+ * Requirements:
+ * - Jenkins with Maven plugin
+ * - JDK 17 installed on Jenkins
+ * - Git plugin configured
+ */
+
+pipeline {
+    // Agent defines where the pipeline runs (any available agent)
+    agent any
+    
+    // Environment variables
+    environment {
+        // Application configuration
+        APP_NAME = 'spring-boot-crud'
+        VERSION = '1.0.0'
+        
+        // Maven configuration
+        MAVEN_OPTS = '-Xmx1024m'
+        
+        // Workspace paths
+        WORKSPACE_DIR = pwd()
+        ARTIFACTS_DIR = "${WORKSPACE_DIR}/artifacts"
+    }
+    
+    // Pipeline options
+    options {
+        // Keep only last 5 builds to save disk space
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        
+        // Prevent concurrent builds
+        disableConcurrentBuilds()
+        
+        // Timeout after 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+        
+        // Add timestamps to console output
+        timestamps()
+    }
+    
+    // Pipeline stages
+    stages {
+        
+        // Stage 1: Pull code from repository
+        stage('Checkout') {
+            steps {
+                script {
+                    echo '========================================'
+                    echo 'STAGE 1: CHECKOUT - Pulling code from GitHub'
+                    echo '========================================'
+                }
+                
+                // Clean workspace before checkout
+                cleanWs()
+                
+                // Checkout code from GitHub repository
+                // NOTE: Replace with your actual repository URL
+                git(
+                    url: 'https://github.com/develper21/sem4_java_prectical',
+                    branch: 'main',
+                )
+                
+                // Display repository information
+                script {
+                    sh '''
+                        echo "Current branch:"
+                        git branch --show-current
+                        
+                        echo "Last commit:"
+                        git log -1 --oneline
+                        
+                        echo "Repository contents:"
+                        ls -la
+                    '''
+                }
+            }
+        }
+        
+        // Stage 2: Build using Maven
+        stage('Build') {
+            steps {
+                script {
+                    echo '========================================'
+                    echo 'STAGE 2: BUILD - Compiling with Maven'
+                    echo '========================================'
+                }
+                
+                // Run Maven clean and compile
+                sh '''
+                    echo "Java Version:"
+                    java -version
+                    
+                    echo "Maven Version:"
+                    mvn -version
+                    
+                    echo "Starting Maven build..."
+                    mvn clean compile -DskipTests
+                    
+                    echo "Build completed successfully!"
+                '''
+            }
+        }
+        
+        // Stage 3: Run test cases
+        stage('Test') {
+            steps {
+                script {
+                    echo '========================================'
+                    echo 'STAGE 3: TEST - Running test cases'
+                    echo '========================================'
+                }
+                
+                // Run Maven tests
+                sh '''
+                    echo "Running unit tests..."
+                    mvn test
+                    
+                    echo "Tests completed!"
+                '''
+            }
+            post {
+                // Always publish test results
+                always {
+                    // Publish JUnit test results
+                    junit testResults: 'target/surefire-reports/*.xml', 
+                          allowEmptyResults: true
+                    
+                    // Archive test reports
+                    archiveArtifacts artifacts: 'target/surefire-reports/**', 
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+        
+        // Stage 4: Code Quality Analysis (Optional but recommended)
+        stage('Code Quality') {
+            steps {
+                script {
+                    echo '========================================'
+                    echo 'STAGE 4: CODE QUALITY - Running analysis'
+                    echo '========================================'
+                }
+                
+                // Run code coverage with JaCoCo
+                sh '''
+                    echo "Running JaCoCo code coverage..."
+                    mvn jacoco:report
+                    
+                    echo "Code coverage report generated!"
+                '''
+            }
+            post {
+                always {
+                    // Publish JaCoCo coverage report
+                    jacoco execPattern: 'target/*.exec',
+                          classPattern: 'target/classes',
+                          sourcePattern: 'src/main/java',
+                          exclusionPattern: '**/test/**'
+                }
+            }
+        }
+        
+        // Stage 5: Package and Generate Artifact
+        stage('Package') {
+            steps {
+                script {
+                    echo '========================================'
+                    echo 'STAGE 5: PACKAGE - Generating build artifact'
+                    echo '========================================'
+                }
+                
+                // Package the application (skip tests as they already ran)
+                sh '''
+                    echo "Packaging application..."
+                    mvn package -DskipTests
+                    
+                    echo "Creating artifacts directory..."
+                    mkdir -p ${ARTIFACTS_DIR}
+                    
+                    echo "Copying artifacts..."
+                    cp target/*.jar ${ARTIFACTS_DIR}/
+                    
+                    echo "Artifacts generated:"
+                    ls -lh ${ARTIFACTS_DIR}/
+                '''
+            }
+        }
+        
+        // Stage 6: Archive Artifacts
+        stage('Archive') {
+            steps {
+                script {
+                    echo '========================================'
+                    echo 'STAGE 6: ARCHIVE - Storing artifacts'
+                    echo '========================================'
+                }
+                
+                // Archive the build artifacts
+                archiveArtifacts artifacts: 'target/*.jar', 
+                               fingerprint: true,
+                               onlyIfSuccessful: true
+                
+                // Archive additional artifacts
+                archiveArtifacts artifacts: 'artifacts/**',
+                               allowEmptyArchive: false
+            }
+        }
+    }
+    
+    // Post-build actions
+    post {
+        // Always executed
+        always {
+            script {
+                echo '========================================'
+                echo 'PIPELINE COMPLETED'
+                echo '========================================'
+            }
+            
+            // Clean up workspace
+            cleanWs(cleanWhenNotBuilt: false,
+                    deleteDirs: true,
+                    disableDeferredWipeout: true,
+                    notFailBuild: true)
+        }
+        
+        // Executed when build succeeds
+        success {
+            script {
+                echo '========================================'
+                echo 'BUILD SUCCESS!'
+                echo '========================================'
+            }
+            
+            // Send success notification (optional)
+            // mail to: 'team@example.com',
+            //      subject: "SUCCESS: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+            //      body: "Build successful! Check console output at ${env.BUILD_URL}"
+        }
+        
+        // Executed when build fails
+        failure {
+            script {
+                echo '========================================'
+                echo 'BUILD FAILED!'
+                echo '========================================'
+            }
+            
+            // Send failure notification (optional)
+            // mail to: 'team@example.com',
+            //      subject: "FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+            //      body: "Build failed! Check console output at ${env.BUILD_URL}"
+        }
+        
+        // Executed when tests fail
+        unstable {
+            script {
+                echo '========================================'
+                echo 'BUILD UNSTABLE - Tests Failed'
+                echo '========================================'
+            }
+        }
+    }
+}
