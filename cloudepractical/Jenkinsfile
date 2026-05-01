@@ -86,39 +86,43 @@ pipeline {
         
         // Stage 2: Build using Maven
         stage('Build') {
-            steps {
-                script {
-                    echo '========================================'
-                    echo 'STAGE 2: BUILD - Compiling with Maven'
-                    echo '========================================'
-                }
-                
-                // Run Maven clean and compile
+        steps {
+            script {
+                echo '========================================'
+                echo 'STAGE 2: BUILD - Compiling with Maven'
+                echo '========================================'
+            }
+
+            dir('cloudepractical') {  // <-- YEH ADD KARO
                 sh '''
                     echo "Java Version:"
                     java -version
-                    
+
                     echo "Maven Version:"
                     mvn -version
-                    
+
+                    echo "Current directory:"
+                    pwd
+
                     echo "Starting Maven build..."
                     mvn clean compile -DskipTests
-                    
+
                     echo "Build completed successfully!"
                 '''
             }
         }
+    }
         
         // Stage 3: Run test cases
         stage('Test') {
-            steps {
-                script {
-                    echo '========================================'
-                    echo 'STAGE 3: TEST - Running test cases'
-                    echo '========================================'
-                }
-                
-                // Run Maven tests
+        steps {
+            script {
+                echo '========================================'
+                echo 'STAGE 3: TEST - Running test cases'
+                echo '========================================'
+            }
+            
+            dir('cloudepractical') {  // <-- YEH ADD KARO
                 sh '''
                     echo "Running unit tests..."
                     mvn test
@@ -126,19 +130,14 @@ pipeline {
                     echo "Tests completed!"
                 '''
             }
-            post {
-                // Always publish test results
-                always {
-                    // Publish JUnit test results
-                    junit testResults: 'target/surefire-reports/*.xml', 
-                          allowEmptyResults: true
-                    
-                    // Archive test reports
-                    archiveArtifacts artifacts: 'target/surefire-reports/**', 
-                                     allowEmptyArchive: true
-                }
+        }
+        post {
+            always {
+                junit testResults: 'cloudepractical/target/surefire-reports/*.xml',  // <-- PATH UPDATE
+                      allowEmptyResults: true
             }
         }
+    }
         
         // Stage 4: Code Quality Analysis (Optional but recommended)
         stage('Code Quality') {
